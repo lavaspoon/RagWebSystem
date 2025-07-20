@@ -326,9 +326,34 @@ const RAGFileManager = () => {
     const isSecondDepth = (category) => {
         return category && category.parent && !category.parent.parent; // parent가 있고 parent의 parent가 없으면 2depth
     };
-    const generateEmbedding = async (categoryId) => {
-        setUploadStatus('임베딩 생성 기능은 준비 중입니다.');
-        setTimeout(() => setUploadStatus(''), 3000);
+
+    // cURL 제공 기능
+    const showCurlForCategory = (categoryId) => {
+        const curlCommand = `curl -X POST "http://localhost:8050/api/search/category/${categoryId}/answer" \\
+     -H "Content-Type: application/x-www-form-urlencoded" \\
+     -d "query=여기에 질문을 입력하세요&topK=5"`;
+
+        navigator.clipboard.writeText(curlCommand).then(() => {
+            setUploadStatus('카테고리 검색 cURL이 클립보드에 복사되었습니다.');
+            setTimeout(() => setUploadStatus(''), 3000);
+        }).catch(() => {
+            // 클립보드 복사가 실패한 경우 모달로 표시
+            alert(`카테고리 검색 cURL:\n\n${curlCommand}`);
+        });
+    };
+
+    const showCurlForDocument = (documentId) => {
+        const curlCommand = `curl -X POST "http://localhost:8050/api/search/document/${documentId}/answer" \\
+     -H "Content-Type: application/x-www-form-urlencoded" \\
+     -d "query=여기에 질문을 입력하세요&topK=5"`;
+
+        navigator.clipboard.writeText(curlCommand).then(() => {
+            setUploadStatus('문서 검색 cURL이 클립보드에 복사되었습니다.');
+            setTimeout(() => setUploadStatus(''), 3000);
+        }).catch(() => {
+            // 클립보드 복사가 실패한 경우 모달로 표시
+            alert(`문서 검색 cURL:\n\n${curlCommand}`);
+        });
     };
 
     // 재귀적으로 카테고리 렌더링 - 2depth 제한
@@ -668,7 +693,7 @@ const RAGFileManager = () => {
 
                 .file-table-header {
                     display: grid;
-                    grid-template-columns: 40px 1fr 100px 120px 100px;
+                    grid-template-columns: 40px 1fr 100px 120px 130px;
                     gap: 1rem;
                     padding: 1rem 1.5rem;
                     background-color: #f8f9fa;
@@ -687,7 +712,7 @@ const RAGFileManager = () => {
 
                 .file-table-row {
                     display: grid;
-                    grid-template-columns: 40px 1fr 100px 120px 100px;
+                    grid-template-columns: 40px 1fr 100px 120px 130px;
                     gap: 1rem;
                     padding: 1rem 1.5rem;
                     border-bottom: 1px solid #f1f3f4;
@@ -736,6 +761,7 @@ const RAGFileManager = () => {
                 .table-actions {
                     display: flex;
                     gap: 0.25rem;
+                    justify-content: center;
                 }
 
                 .action-btn {
@@ -780,58 +806,6 @@ const RAGFileManager = () => {
                     background-color: white;
                     border-radius: 0.75rem;
                     border: 1px solid #e9ecef;
-                }
-
-                .file-info {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 0.75rem;
-                    margin-bottom: 1rem;
-                }
-
-                .file-info svg {
-                    color: #3b82f6;
-                    flex-shrink: 0;
-                    margin-top: 0.125rem;
-                }
-
-                .file-details {
-                    flex: 1;
-                    min-width: 0;
-                }
-
-                .file-name {
-                    font-size: 0.875rem;
-                    font-weight: 500;
-                    color: #1a1a1a;
-                    word-break: break-word;
-                    margin-bottom: 0.25rem;
-                }
-
-                .file-meta {
-                    font-size: 0.75rem;
-                    color: #6c757d;
-                }
-
-                .file-actions {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 0.5rem;
-                }
-
-                .file-actions button {
-                    background: none;
-                    border: none;
-                    padding: 0.375rem;
-                    cursor: pointer;
-                    color: #6c757d;
-                    border-radius: 0.375rem;
-                    transition: all 0.2s;
-                }
-
-                .file-actions button:hover {
-                    background-color: #f8f9fa;
-                    color: #1a1a1a;
                 }
 
                 .no-selection {
@@ -1039,9 +1013,9 @@ const RAGFileManager = () => {
                                                     <Upload size={20} />
                                                     <span>파일 업로드</span>
                                                 </button>
-                                                <button onClick={() => generateEmbedding(selectedCategory.id)}>
+                                                <button onClick={() => showCurlForCategory(selectedCategory.id)}>
                                                     <Copy size={20} />
-                                                    <span>임베딩 생성</span>
+                                                    <span>cURL 복사</span>
                                                 </button>
                                             </>
                                         )}
@@ -1158,6 +1132,14 @@ const RAGFileManager = () => {
                                                                             className="action-btn download-btn"
                                                                         >
                                                                             <Download size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => showCurlForDocument(file.id)}
+                                                                            title="cURL 복사"
+                                                                            className="action-btn"
+                                                                            style={{ color: '#8b5cf6' }}
+                                                                        >
+                                                                            <Copy size={14} />
                                                                         </button>
                                                                         <button
                                                                             onClick={() => deleteFile(file.id)}
