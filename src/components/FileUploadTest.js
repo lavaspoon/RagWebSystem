@@ -11,6 +11,9 @@ const RAGFileManager = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [uploadStatus, setUploadStatus] = useState('');
+    const [showCurlOptionsModal, setShowCurlOptionsModal] = useState(false);
+    const [curlOptions, setCurlOptions] = useState([]);
+    const [curlModalTitle, setCurlModalTitle] = useState('');
 
     const API_BASE = 'http://localhost:8050/api';
 
@@ -109,6 +112,7 @@ const RAGFileManager = () => {
             setCategories(updateCategories(categories));
         }
     };
+
     const toggleCategory = (categoryId) => {
         const updateCategories = (cats) => {
             return cats.map(cat => {
@@ -311,7 +315,7 @@ const RAGFileManager = () => {
         }
     };
 
-    // 카테고리 depth 확인 함수 수정
+    // 카테고리 depth 확인 함수
     const getCategoryDepth = (category) => {
         if (!category) return 0;
         return category.parent ? 2 : 1; // parent가 있으면 2depth, 없으면 1depth
@@ -327,32 +331,63 @@ const RAGFileManager = () => {
         return category && category.parent && !category.parent.parent; // parent가 있고 parent의 parent가 없으면 2depth
     };
 
-    // cURL 제공 기능
-    const showCurlForCategory = (categoryId) => {
-        const curlCommand = `curl -X POST "http://localhost:8050/api/search/category/${categoryId}/answer" \\
+    // cURL 제공 기능 - 선택 모달 포함
+    const showCurlOptionsForCategory = (categoryId) => {
+        const options = [
+            {
+                title: "일반 방식 (JSON 응답)",
+                description: "전체 응답을 한 번에 받습니다",
+                curl: `curl -X POST "http://localhost:8050/api/search/category/${categoryId}/answer" \\
      -H "Content-Type: application/x-www-form-urlencoded" \\
-     -d "query=여기에 질문을 입력하세요&topK=5"`;
+     -d "query=여기에 질문을 입력하세요&topK=5"`
+            },
+            {
+                title: "Stream 방식 (실시간 응답)",
+                description: "답변이 실시간으로 스트리밍됩니다",
+                curl: `curl -X POST "http://localhost:8050/api/search/category/${categoryId}/answer/stream" \\
+     -H "Content-Type: application/x-www-form-urlencoded" \\
+     -d "query=여기에 질문을 입력하세요&topK=5"`
+            }
+        ];
 
-        navigator.clipboard.writeText(curlCommand).then(() => {
-            setUploadStatus('카테고리 검색 cURL이 클립보드에 복사되었습니다.');
-            setTimeout(() => setUploadStatus(''), 3000);
-        }).catch(() => {
-            // 클립보드 복사가 실패한 경우 모달로 표시
-            alert(`카테고리 검색 cURL:\n\n${curlCommand}`);
-        });
+        showCurlModal(options, "카테고리 검색");
     };
 
-    const showCurlForDocument = (documentId) => {
-        const curlCommand = `curl -X POST "http://localhost:8050/api/search/document/${documentId}/answer" \\
+    const showCurlOptionsForDocument = (documentId) => {
+        const options = [
+            {
+                title: "일반 방식 (JSON 응답)",
+                description: "전체 응답을 한 번에 받습니다",
+                curl: `curl -X POST "http://localhost:8050/api/search/document/${documentId}/answer" \\
      -H "Content-Type: application/x-www-form-urlencoded" \\
-     -d "query=여기에 질문을 입력하세요&topK=5"`;
+     -d "query=여기에 질문을 입력하세요&topK=5"`
+            },
+            {
+                title: "Stream 방식 (실시간 응답)",
+                description: "답변이 실시간으로 스트리밍됩니다",
+                curl: `curl -X POST "http://localhost:8050/api/search/document/${documentId}/answer/stream" \\
+     -H "Content-Type: application/x-www-form-urlencoded" \\
+     -d "query=여기에 질문을 입력하세요&topK=5"`
+            }
+        ];
 
+        showCurlModal(options, "문서 검색");
+    };
+
+    const showCurlModal = (options, title) => {
+        setCurlOptions(options);
+        setCurlModalTitle(title);
+        setShowCurlOptionsModal(true);
+    };
+
+    const copyCurlToClipboard = (curlCommand, optionTitle) => {
         navigator.clipboard.writeText(curlCommand).then(() => {
-            setUploadStatus('문서 검색 cURL이 클립보드에 복사되었습니다.');
+            setUploadStatus(`${optionTitle} cURL이 클립보드에 복사되었습니다.`);
             setTimeout(() => setUploadStatus(''), 3000);
+            setShowCurlOptionsModal(false);
         }).catch(() => {
-            // 클립보드 복사가 실패한 경우 모달로 표시
-            alert(`문서 검색 cURL:\n\n${curlCommand}`);
+            alert(`${optionTitle} cURL:\n\n${curlCommand}`);
+            setShowCurlOptionsModal(false);
         });
     };
 
@@ -895,6 +930,86 @@ const RAGFileManager = () => {
                     background-color: #2563eb;
                 }
 
+                /* cURL 옵션 모달 스타일 */
+                .curl-modal {
+                    background-color: white;
+                    border-radius: 0.75rem;
+                    padding: 2rem;
+                    width: 100%;
+                    max-width: 600px;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+                    max-height: 80vh;
+                    overflow-y: auto;
+                }
+
+                .curl-options {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .curl-option {
+                    border: 1px solid #e9ecef;
+                    border-radius: 0.5rem;
+                    padding: 1.5rem;
+                    transition: all 0.2s;
+                    cursor: pointer;
+                }
+
+                .curl-option:hover {
+                    border-color: #3b82f6;
+                    background-color: #f8fafc;
+                }
+
+                .curl-option-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 0.5rem;
+                }
+
+                .curl-option-title {
+                    font-size: 1rem;
+                    font-weight: 600;
+                    color: #1a1a1a;
+                }
+
+                .curl-option-badge {
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 9999px;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                }
+
+                .curl-option-badge.normal {
+                    background-color: #dbeafe;
+                    color: #1e40af;
+                }
+
+                .curl-option-badge.stream {
+                    background-color: #dcfce7;
+                    color: #166534;
+                }
+
+                .curl-option-description {
+                    font-size: 0.875rem;
+                    color: #6c757d;
+                    margin-bottom: 1rem;
+                }
+
+                .curl-command {
+                    background-color: #f1f5f9;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 0.375rem;
+                    padding: 1rem;
+                    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                    font-size: 0.75rem;
+                    color: #334155;
+                    white-space: pre-wrap;
+                    word-break: break-all;
+                    line-height: 1.5;
+                }
+
                 .status-message {
                     position: fixed;
                     bottom: 2rem;
@@ -1013,14 +1128,12 @@ const RAGFileManager = () => {
                                                     <Upload size={20} />
                                                     <span>파일 업로드</span>
                                                 </button>
-                                                <button onClick={() => showCurlForCategory(selectedCategory.id)}>
+                                                <button onClick={() => showCurlOptionsForCategory(selectedCategory.id)}>
                                                     <Copy size={20} />
                                                     <span>cURL 복사</span>
                                                 </button>
                                             </>
                                         )}
-
-                                        {/* 1depth에서는 헤더 액션 버튼 제거 */}
                                     </div>
                                 </div>
                                 <div className={isFirstDepth(selectedCategory) ? "file-list" : "file-dashboard-container"}>
@@ -1134,7 +1247,7 @@ const RAGFileManager = () => {
                                                                             <Download size={14} />
                                                                         </button>
                                                                         <button
-                                                                            onClick={() => showCurlForDocument(file.id)}
+                                                                            onClick={() => showCurlOptionsForDocument(file.id)}
                                                                             title="cURL 복사"
                                                                             className="action-btn"
                                                                             style={{ color: '#8b5cf6' }}
@@ -1175,6 +1288,49 @@ const RAGFileManager = () => {
                         )}
                     </div>
                 </div>
+
+                {/* cURL 옵션 선택 모달 */}
+                {showCurlOptionsModal && (
+                    <div className="modal-overlay">
+                        <div className="curl-modal">
+                            <h3 style={{
+                                margin: '0 0 1.5rem 0',
+                                fontSize: '1.25rem',
+                                fontWeight: '600',
+                                color: '#1a1a1a'
+                            }}>
+                                {curlModalTitle} cURL 선택
+                            </h3>
+                            <div className="curl-options">
+                                {curlOptions.map((option, index) => (
+                                    <div
+                                        key={index}
+                                        className="curl-option"
+                                        onClick={() => copyCurlToClipboard(option.curl, option.title)}
+                                    >
+                                        <div className="curl-option-header">
+                                            <div className="curl-option-title">{option.title}</div>
+                                            <div className={`curl-option-badge ${index === 0 ? 'normal' : 'stream'}`}>
+                                                {index === 0 ? 'JSON' : 'STREAM'}
+                                            </div>
+                                        </div>
+                                        <div className="curl-option-description">
+                                            {option.description}
+                                        </div>
+                                        <div className="curl-command">
+                                            {option.curl}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
+                                <button onClick={() => setShowCurlOptionsModal(false)}>
+                                    닫기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* 새 카테고리 추가 모달 */}
                 {showModal && (
