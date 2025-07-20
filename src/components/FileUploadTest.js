@@ -576,6 +576,7 @@ const RAGFileManager = () => {
                     cursor: not-allowed;
                 }
 
+                /* 1depth용 카드 레이아웃만 */
                 .file-list {
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -594,6 +595,191 @@ const RAGFileManager = () => {
                 .file-item:hover {
                     transform: translateY(-2px);
                     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }
+
+                .file-info {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 0.75rem;
+                    margin-bottom: 1rem;
+                }
+
+                .file-info svg {
+                    color: #3b82f6;
+                    flex-shrink: 0;
+                    margin-top: 0.125rem;
+                }
+
+                .file-details {
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .file-name {
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    color: #1a1a1a;
+                    word-break: break-word;
+                    margin-bottom: 0.25rem;
+                }
+
+                .file-meta {
+                    font-size: 0.75rem;
+                    color: #6c757d;
+                }
+
+                .file-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 0.5rem;
+                }
+
+                .file-actions button {
+                    background: none;
+                    border: none;
+                    padding: 0.375rem;
+                    cursor: pointer;
+                    color: #6c757d;
+                    border-radius: 0.375rem;
+                    transition: all 0.2s;
+                }
+
+                .file-actions button:hover {
+                    background-color: #f8f9fa;
+                    color: #1a1a1a;
+                }
+
+                /* 2depth용 대시보드 컨테이너 */
+                .file-dashboard-container {
+                    width: 100%;
+                }
+
+                /* 2depth용 대시보드 테이블 레이아웃 */
+                .file-dashboard {
+                    background-color: white;
+                    border-radius: 0.75rem;
+                    border: 1px solid #e9ecef;
+                    overflow: hidden;
+                }
+
+                .file-table {
+                    width: 100%;
+                }
+
+                .file-table-header {
+                    display: grid;
+                    grid-template-columns: 40px 1fr 100px 120px 100px;
+                    gap: 1rem;
+                    padding: 1rem 1.5rem;
+                    background-color: #f8f9fa;
+                    border-bottom: 1px solid #e9ecef;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: #6c757d;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+
+                .file-table-body {
+                    max-height: 60vh;
+                    overflow-y: auto;
+                }
+
+                .file-table-row {
+                    display: grid;
+                    grid-template-columns: 40px 1fr 100px 120px 100px;
+                    gap: 1rem;
+                    padding: 1rem 1.5rem;
+                    border-bottom: 1px solid #f1f3f4;
+                    transition: background-color 0.2s;
+                    align-items: center;
+                }
+
+                .file-table-row:hover {
+                    background-color: #f8f9fa;
+                }
+
+                .file-table-row:last-child {
+                    border-bottom: none;
+                }
+
+                .table-col-icon {
+                    display: flex;
+                    justify-content: center;
+                    color: #3b82f6;
+                }
+
+                .table-col-name {
+                    min-width: 0;
+                }
+
+                .file-name-display {
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    color: #1a1a1a;
+                    word-break: break-all;
+                    line-height: 1.4;
+                }
+
+                .table-col-size,
+                .table-col-date {
+                    font-size: 0.75rem;
+                    color: #6c757d;
+                    text-align: center;
+                }
+
+                .table-col-actions {
+                    display: flex;
+                    justify-content: center;
+                }
+
+                .table-actions {
+                    display: flex;
+                    gap: 0.25rem;
+                }
+
+                .action-btn {
+                    background: none;
+                    border: none;
+                    padding: 0.375rem;
+                    cursor: pointer;
+                    border-radius: 0.375rem;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .download-btn {
+                    color: #059669;
+                }
+
+                .download-btn:hover {
+                    background-color: #d1fae5;
+                    color: #047857;
+                }
+
+                .delete-btn {
+                    color: #dc2626;
+                }
+
+                .delete-btn:hover {
+                    background-color: #fee2e2;
+                    color: #b91c1c;
+                }
+
+                /* 2depth 빈 상태 */
+                .file-empty-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 300px;
+                    color: #6c757d;
+                    text-align: center;
+                    background-color: white;
+                    border-radius: 0.75rem;
+                    border: 1px solid #e9ecef;
                 }
 
                 .file-info {
@@ -863,7 +1049,7 @@ const RAGFileManager = () => {
                                         {/* 1depth에서는 헤더 액션 버튼 제거 */}
                                     </div>
                                 </div>
-                                <div className="file-list">
+                                <div className={isFirstDepth(selectedCategory) ? "file-list" : "file-dashboard-container"}>
                                     {isFirstDepth(selectedCategory) ? (
                                         /* 1depth - 하위 카테고리 목록 표시 */
                                         <>
@@ -938,47 +1124,58 @@ const RAGFileManager = () => {
                                             }
                                         </>
                                     ) : (
-                                        /* 2depth - 파일 목록 표시 */
+                                        /* 2depth - 파일 목록을 리스트 형식 대시보드로 표시 */
                                         files.length > 0 ? (
-                                            files.map(file => (
-                                                <div key={file.id} className="file-item">
-                                                    <div className="file-info">
-                                                        <FileText size={20} />
-                                                        <div className="file-details">
-                                                            <div className="file-name">{file.title}</div>
-                                                            <div className="file-meta">
-                                                                {file.fileName} • {(file.fileSize / 1024).toFixed(1)} KB
-                                                            </div>
-                                                        </div>
+                                            <div className="file-dashboard">
+                                                <div className="file-table">
+                                                    <div className="file-table-header">
+                                                        <div className="table-col-icon"></div>
+                                                        <div className="table-col-name">파일명</div>
+                                                        <div className="table-col-size">크기</div>
+                                                        <div className="table-col-date">업로드일</div>
+                                                        <div className="table-col-actions">작업</div>
                                                     </div>
-                                                    <div className="file-actions">
-                                                        <button
-                                                            onClick={() => downloadFile(file.id, file.fileName)}
-                                                            title="다운로드"
-                                                        >
-                                                            <Download size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => deleteFile(file.id)}
-                                                            title="삭제"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                    <div className="file-table-body">
+                                                        {files.map(file => (
+                                                            <div key={file.id} className="file-table-row">
+                                                                <div className="table-col-icon">
+                                                                    <FileText size={18} />
+                                                                </div>
+                                                                <div className="table-col-name">
+                                                                    <div className="file-name-display">{file.fileName}</div>
+                                                                </div>
+                                                                <div className="table-col-size">
+                                                                    {(file.fileSize / 1024).toFixed(1)} KB
+                                                                </div>
+                                                                <div className="table-col-date">
+                                                                    {file.uploadDate ? new Date(file.uploadDate).toLocaleDateString('ko-KR') : '-'}
+                                                                </div>
+                                                                <div className="table-col-actions">
+                                                                    <div className="table-actions">
+                                                                        <button
+                                                                            onClick={() => downloadFile(file.id, file.fileName)}
+                                                                            title="다운로드"
+                                                                            className="action-btn download-btn"
+                                                                        >
+                                                                            <Download size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => deleteFile(file.id)}
+                                                                            title="삭제"
+                                                                            className="action-btn delete-btn"
+                                                                        >
+                                                                            <Trash2 size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            ))
+                                            </div>
                                         ) : (
                                             /* 2depth - 파일이 없을 때 */
-                                            <div style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                height: '300px',
-                                                color: '#6c757d',
-                                                textAlign: 'center',
-                                                gridColumn: '1 / -1'  // 그리드의 전체 컬럼을 차지
-                                            }}>
+                                            <div className="file-empty-state">
                                                 <FileText size={48} style={{ marginBottom: '1rem', color: '#adb5bd' }} />
                                                 <p style={{ margin: '0', fontSize: '0.875rem' }}>
                                                     업로드된 파일이 없습니다.<br/>
