@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Plus, Trash2, Upload, Download, Copy, FileText, Folder, FolderOpen } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Trash2, Upload, Download, Copy, FileText, Folder, FolderOpen, MessageCircle, Send, Loader } from 'lucide-react';
 
 const RAGFileManager = () => {
     const [categories, setCategories] = useState([]);
@@ -14,6 +14,16 @@ const RAGFileManager = () => {
     const [showCurlOptionsModal, setShowCurlOptionsModal] = useState(false);
     const [curlOptions, setCurlOptions] = useState([]);
     const [curlModalTitle, setCurlModalTitle] = useState('');
+
+    // 테스트 화면 관련 상태
+    const [showTestModal, setShowTestModal] = useState(false);
+    const [testQuery, setTestQuery] = useState('');
+    const [testResponse, setTestResponse] = useState('');
+    const [testLoading, setTestLoading] = useState(false);
+    const [testType, setTestType] = useState('category'); // 'category' or 'document'
+    const [testTargetId, setTestTargetId] = useState(null);
+    const [testTargetName, setTestTargetName] = useState('');
+    const [isStreamMode, setIsStreamMode] = useState(false);
 
     const API_BASE = 'http://localhost:8050/api';
 
@@ -391,6 +401,97 @@ const RAGFileManager = () => {
         });
     };
 
+    // 테스트 모달 열기 함수들
+    const openCategoryTest = (categoryId, categoryName) => {
+        setTestType('category');
+        setTestTargetId(categoryId);
+        setTestTargetName(categoryName);
+        setTestQuery('');
+        setTestResponse('');
+        setShowTestModal(true);
+    };
+
+    const openDocumentTest = (documentId, documentName) => {
+        setTestType('document');
+        setTestTargetId(documentId);
+        setTestTargetName(documentName);
+        setTestQuery('');
+        setTestResponse('');
+        setShowTestModal(true);
+    };
+
+    // API 테스트 함수
+    const runTest = async () => {
+        if (!testQuery.trim()) {
+            setError('질문을 입력해주세요.');
+            setTimeout(() => setError(null), 3000);
+            return;
+        }
+
+        setTestLoading(true);
+        setTestResponse('');
+
+        try {
+            const endpoint = testType === 'category'
+                ? `${API_BASE}/search/category/${testTargetId}/answer${isStreamMode ? '/stream' : ''}`
+                : `${API_BASE}/search/document/${testTargetId}/answer${isStreamMode ? '/stream' : ''}`;
+
+            const params = new URLSearchParams();
+            params.append('query', testQuery);
+            params.append('topK', '5');
+
+            if (isStreamMode) {
+                // 스트림 모드
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let result = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    result += chunk;
+                    setTestResponse(result);
+                }
+            } else {
+                // 일반 모드
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setTestResponse(JSON.stringify(data, null, 2));
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`API 호출 실패: ${errorText}`);
+                }
+            }
+        } catch (err) {
+            console.error('테스트 API 호출 오류:', err);
+            setTestResponse(`오류 발생: ${err.message}`);
+        } finally {
+            setTestLoading(false);
+        }
+    };
+
     // 재귀적으로 카테고리 렌더링 - 2depth 제한
     const renderCategory = (category, level = 0) => {
         return (
@@ -636,6 +737,17 @@ const RAGFileManager = () => {
                     cursor: not-allowed;
                 }
 
+                .test-button {
+                    background-color: #10b981 !important;
+                    color: white !important;
+                    border: 1px solid #10b981 !important;
+                }
+
+                .test-button:hover {
+                    background-color: #059669 !important;
+                    border-color: #059669 !important;
+                }
+
                 /* 1depth용 카드 레이아웃만 */
                 .file-list {
                     display: grid;
@@ -728,7 +840,7 @@ const RAGFileManager = () => {
 
                 .file-table-header {
                     display: grid;
-                    grid-template-columns: 40px 1fr 100px 120px 130px;
+                    grid-template-columns: 40px 1fr 100px 120px 160px;
                     gap: 1rem;
                     padding: 1rem 1.5rem;
                     background-color: #f8f9fa;
@@ -747,7 +859,7 @@ const RAGFileManager = () => {
 
                 .file-table-row {
                     display: grid;
-                    grid-template-columns: 40px 1fr 100px 120px 130px;
+                    grid-template-columns: 40px 1fr 100px 120px 160px;
                     gap: 1rem;
                     padding: 1rem 1.5rem;
                     border-bottom: 1px solid #f1f3f4;
@@ -818,6 +930,15 @@ const RAGFileManager = () => {
                 .download-btn:hover {
                     background-color: #d1fae5;
                     color: #047857;
+                }
+
+                .test-action-btn {
+                    color: #8b5cf6;
+                }
+
+                .test-action-btn:hover {
+                    background-color: #f3e8ff;
+                    color: #7c3aed;
                 }
 
                 .delete-btn {
@@ -928,6 +1049,157 @@ const RAGFileManager = () => {
 
                 .modal-actions button:last-child:hover {
                     background-color: #2563eb;
+                }
+
+                /* 테스트 모달 스타일 */
+                .test-modal {
+                    background-color: white;
+                    border-radius: 0.75rem;
+                    padding: 2rem;
+                    width: 100%;
+                    max-width: 800px;
+                    max-height: 90vh;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .test-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 1.5rem;
+                    padding-bottom: 1rem;
+                    border-bottom: 1px solid #e9ecef;
+                }
+
+                .test-title {
+                    margin: 0;
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    color: #1a1a1a;
+                }
+
+                .test-target-info {
+                    font-size: 0.875rem;
+                    color: #6c757d;
+                    background-color: #f8f9fa;
+                    padding: 0.5rem 0.75rem;
+                    border-radius: 0.375rem;
+                }
+
+                .test-mode-toggle {
+                    display: flex;
+                    gap: 0.5rem;
+                    margin-bottom: 1rem;
+                    padding: 0.25rem;
+                    background-color: #f1f5f9;
+                    border-radius: 0.5rem;
+                }
+
+                .mode-btn {
+                    padding: 0.5rem 1rem;
+                    border: none;
+                    background: none;
+                    border-radius: 0.375rem;
+                    cursor: pointer;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    transition: all 0.2s;
+                }
+
+                .mode-btn.active {
+                    background-color: white;
+                    color: #3b82f6;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+
+                .mode-btn:not(.active) {
+                    color: #6c757d;
+                }
+
+                .query-section {
+                    margin-bottom: 1.5rem;
+                }
+
+                .query-input {
+                    width: 100%;
+                    padding: 0.75rem;
+                    border: 1px solid #e9ecef;
+                    border-radius: 0.5rem;
+                    font-size: 0.875rem;
+                    box-sizing: border-box;
+                    resize: vertical;
+                    min-height: 80px;
+                }
+
+                .query-input:focus {
+                    outline: none;
+                    border-color: #3b82f6;
+                    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                }
+
+                .test-actions {
+                    display: flex;
+                    gap: 1rem;
+                    margin-bottom: 1.5rem;
+                }
+
+                .send-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.75rem 1.5rem;
+                    background-color: #3b82f6;
+                    color: white;
+                    border: none;
+                    border-radius: 0.5rem;
+                    cursor: pointer;
+                    font-weight: 500;
+                    transition: background-color 0.2s;
+                }
+
+                .send-btn:hover:not(:disabled) {
+                    background-color: #2563eb;
+                }
+
+                .send-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+
+                .response-section {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .response-label {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: #374151;
+                    margin-bottom: 0.5rem;
+                }
+
+                .response-area {
+                    flex: 1;
+                    min-height: 200px;
+                    max-height: 400px;
+                    padding: 1rem;
+                    border: 1px solid #e9ecef;
+                    border-radius: 0.5rem;
+                    background-color: #f8f9fa;
+                    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                    font-size: 0.75rem;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    overflow-y: auto;
+                    color: #1f2937;
+                }
+
+                .response-area.empty {
+                    color: #9ca3af;
+                    font-style: italic;
                 }
 
                 /* cURL 옵션 모달 스타일 */
@@ -1128,6 +1400,13 @@ const RAGFileManager = () => {
                                                     <Upload size={20} />
                                                     <span>파일 업로드</span>
                                                 </button>
+                                                <button
+                                                    className="test-button"
+                                                    onClick={() => openCategoryTest(selectedCategory.id, selectedCategory.name)}
+                                                >
+                                                    <MessageCircle size={20} />
+                                                    <span>테스트</span>
+                                                </button>
                                                 <button onClick={() => showCurlOptionsForCategory(selectedCategory.id)}>
                                                     <Copy size={20} />
                                                     <span>cURL 복사</span>
@@ -1247,6 +1526,13 @@ const RAGFileManager = () => {
                                                                             <Download size={14} />
                                                                         </button>
                                                                         <button
+                                                                            onClick={() => openDocumentTest(file.id, file.fileName)}
+                                                                            title="테스트"
+                                                                            className="action-btn test-action-btn"
+                                                                        >
+                                                                            <MessageCircle size={14} />
+                                                                        </button>
+                                                                        <button
                                                                             onClick={() => showCurlOptionsForDocument(file.id)}
                                                                             title="cURL 복사"
                                                                             className="action-btn"
@@ -1288,6 +1574,73 @@ const RAGFileManager = () => {
                         )}
                     </div>
                 </div>
+
+                {/* 테스트 모달 */}
+                {showTestModal && (
+                    <div className="modal-overlay">
+                        <div className="test-modal">
+                            <div className="test-header">
+                                <h3 className="test-title">RAG 테스트</h3>
+                                <div className="test-target-info">
+                                    {testType === 'category' ? '카테고리' : '문서'}: {testTargetName}
+                                </div>
+                            </div>
+
+                            <div className="test-mode-toggle">
+                                <button
+                                    className={`mode-btn ${!isStreamMode ? 'active' : ''}`}
+                                    onClick={() => setIsStreamMode(false)}
+                                >
+                                    일반 모드
+                                </button>
+                                <button
+                                    className={`mode-btn ${isStreamMode ? 'active' : ''}`}
+                                    onClick={() => setIsStreamMode(true)}
+                                >
+                                    스트림 모드
+                                </button>
+                            </div>
+
+                            <div className="query-section">
+                                <textarea
+                                    className="query-input"
+                                    value={testQuery}
+                                    onChange={(e) => setTestQuery(e.target.value)}
+                                    placeholder="질문을 입력하세요..."
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className="test-actions">
+                                <button
+                                    className="send-btn"
+                                    onClick={runTest}
+                                    disabled={testLoading || !testQuery.trim()}
+                                >
+                                    {testLoading ? (
+                                        <Loader size={16} className="animate-spin" />
+                                    ) : (
+                                        <Send size={16} />
+                                    )}
+                                    <span>{testLoading ? '처리 중...' : '질문하기'}</span>
+                                </button>
+                            </div>
+
+                            <div className="response-section">
+                                <div className="response-label">응답:</div>
+                                <div className={`response-area ${!testResponse ? 'empty' : ''}`}>
+                                    {testResponse || '여기에 응답이 표시됩니다...'}
+                                </div>
+                            </div>
+
+                            <div className="modal-actions">
+                                <button onClick={() => setShowTestModal(false)}>
+                                    닫기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* cURL 옵션 선택 모달 */}
                 {showCurlOptionsModal && (
